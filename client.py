@@ -30,7 +30,7 @@ def main(time_since=TIME_SINCE):
     repository_average_response_time_in_seconds = {}
     for repoURL in repositories:
         datetime_time_deltas_individual = []
-        print("Processing repo: ", repoURL)
+        print("INFO: Processing repo: ", repoURL)
         repo = g.get_repo(repoURL)
 
         # Get Issues
@@ -51,6 +51,9 @@ def main(time_since=TIME_SINCE):
 
         repository_average_response_time_in_seconds[repoURL] = datetime_time_deltas_individual
 
+    print("Calculation Reports for Repositories:")
+    print("    Individual repository times")
+
     # Calculate average time of responses for each repository
     print()
     for repoName, values in repository_average_response_time_in_seconds.items():
@@ -59,9 +62,9 @@ def main(time_since=TIME_SINCE):
         datetime_time_deltas_total.extend(values)
 
     # Calculate average total time of responses for all repositories
-    print()
-    print()
-    print("Total list of response times: ", datetime_time_deltas_total)
+    # print()
+    # print()
+    # print("DEBUG:    Total list of response times: ", datetime_time_deltas_total)
     print()
     print()
     average_response_time_of_all_repositories_in_seconds = calculate_average_time(datetime_time_deltas_total)
@@ -75,7 +78,7 @@ def print_report(repository_name, average_response_time_in_seconds):
     # print("average_response_time_in_seconds: ", average_response_time_in_seconds)
     hours = average_response_time_in_seconds // 3600
     minutes = (average_response_time_in_seconds % 3600) // 60
-    print("    '" + repository_name +
+    print("      '" + repository_name +
           "' average response time is {:02d} hours and {:02d} minutes".format(int(hours), int(minutes)))
 
 
@@ -124,7 +127,7 @@ def get_pr_response_time(pull_request):
     Get time since creation of PR and first non-bot response comment.
     :returns None if nothing valid or Datetime of time difference.
     """
-    print("    Processing Pull Request: ", pull_request.number)
+    print("INFO:    Processing Pull Request: ", pull_request.number)
     pull_request_created_at = pull_request.created_at
     comment_created_at = None
     for comment in pull_request.get_issue_comments():  # Assuming comments are in order
@@ -134,7 +137,7 @@ def get_pr_response_time(pull_request):
     if comment_created_at is not None:
         # Found a valid comment from a non-bot
         time_delta = comment_created_at - pull_request_created_at
-        print("      Time Delta: ", time_delta)
+        print("INFO:      Time Delta: ", time_delta)
         return time_delta
     else:
         # print("No valid responses yet for PR: ", pull_request.number)
@@ -146,7 +149,7 @@ def get_issue_response_time(issue):
     Get time since creation of issue and first non-bot response comment.
     :returns None if nothing valid or Datetime of time difference.
     """
-    print("    Processing Pull Request: ", issue.number)
+    print("INFO:    Processing Pull Request: ", issue.number)
     issue_created_at = issue.created_at
     comment_created_at = None
     for comment in issue.get_comments():  # Assuming comments are in order
@@ -156,7 +159,7 @@ def get_issue_response_time(issue):
     if comment_created_at is not None:
         # Found a valid comment from a non-bot
         time_delta = comment_created_at - issue_created_at
-        print("      Time Delta: ", time_delta)
+        print("INFO:      Time Delta: ", time_delta)
         return time_delta
     else:
         # print("No valid responses yet for issue: ", issue.number)
