@@ -12,9 +12,9 @@ TIME_SINCE = (datetime.now() - timedelta(DAYS_SINCE))  # Get the time from 30-da
 repositories = [
     'open-telemetry/opentelemetry-java',
     'open-telemetry/opentelemetry-java-contrib',
-    # 'open-telemetry/opentelemetry.io',
-    # 'open-telemetry/opentelemetry-collector',
-    # 'open-telemetry/opentelemetry-specification',
+    'open-telemetry/opentelemetry.io',
+    'open-telemetry/opentelemetry-collector',
+    'open-telemetry/opentelemetry-specification',
 ]
 
 GITHUB_TOKEN = "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"  # Allow for more API requests
@@ -78,7 +78,7 @@ def print_report(repository_name, average_response_time_in_seconds):
     # print("average_response_time_in_seconds: ", average_response_time_in_seconds)
     hours = average_response_time_in_seconds // 3600
     minutes = (average_response_time_in_seconds % 3600) // 60
-    print("      '" + repository_name +
+    print("        '" + repository_name +
           "' average response time is {:02d} hours and {:02d} minutes".format(int(hours), int(minutes)))
 
 
