@@ -1,7 +1,12 @@
+# This project makes use of PyGitHub. Install it by running:
+#     pip install PyGithub
+
+# Author: Clifton Dobrich
+
 # NOTE: the functions get_pr_response_time() and get_issue_response_time() could ALMOST be generalized/templatized,
 # except the method call for getting comments is slightly different for issues and pull-requests.
 
-# Attempts to use Github's API for get_issues(since=TIME) appears problematic.
+# NOTE: Attempts to use Github's API for get_issues(since=TIME) appears problematic.
 
 from datetime import datetime, timedelta
 from github import Github
