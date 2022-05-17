@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
-from github import Github
-from pprint import pprint
+from github import Github, PaginatedList
 
 API_BASE_STRING = "https://api.github.com/repos/"
 DAYS_SINCE = 30
@@ -24,32 +23,77 @@ def main():
 
     # Get Issues
     issues = repo.get_issues(since=TIME_SINCE)
-    # for issue in issues:
+    for issue in issues:
+        pass
     issue = repo.get_issue(4448)
+    get_issue_response_time(issue)
+
+    # Get PRs
+    pull_requests = get_pulls_since(repo, TIME_SINCE)
+    if len(pull_requests) > 0:
+        for pr in pull_requests:
+            pass
+
+
+def get_pulls_since(repository, since_time):
+    """
+    Get the Pull Requests from input repository since the input time.
+    :param repository: The target repository
+    :param since_time: The datetime cut-off value for when pull requests are no longer considered valid.
+    :returns: List of pull requests within the datetime range, or an empty list.
+    """
+    pull_requests_within_valid_time_range = []
+    pull_requests_temp = repository.get_pulls()
+    for pr_candidate in pull_requests_temp:
+        if check_pull_requests_is_within_accepted_range(pr_candidate, since_time):
+            pull_requests_within_valid_time_range.append(pr_candidate)
+    return pull_requests_within_valid_time_range
+
+
+def check_pull_requests_is_within_accepted_range(pr, since_time):
+    """
+    Determine if the input Pull Request object's created time is within (greater than) the input Datetime delta.
+
+    :param pr: The candidate pull request
+    :param since_time: The datetime cut-off value for when pull requests are no longer considered valid.
+    :returns: True if within allowed time range, or False if not.
+    """
+    if pr.created_at > since_time:
+        return True
+    else:
+        return False
+
+
+def get_pr_response_time(pull_request):
+    comments = pull_request.get_issue_comments()
+    pass
+
+
+def get_issue_response_time(issue):
+    """
+    Get time since creation of issue and first non-bot response comment.
+    :returns None if nothing valid or Datetime of time difference.
+    """
     print("Issue ID#: ", issue.number)
     print("  Number of comments: ", issue.comments)
     issue_created_at = issue.created_at
     comment_created_at = None
     for comment in issue.get_comments():  # Assuming comments are in order
-        if checkIfUserIsBot(comment.user.login):
+        if check_if_user_is_bot(comment.user.login):
             comment_created_at = comment.created_at
             break
     if comment_created_at is not None:
         # Found a valid comment from a non-bot
         # print("Type: ", issue_created_at)
-        timediff = comment_created_at - issue_created_at
-        print("Timediff: ", timediff)
+        time_diff = comment_created_at - issue_created_at
+        print("Timediff: ", time_diff)
+        return time_diff
     else:
         print("No valid responses yet for issue: ", issue.id)
-
-    # Get PRs
-    # pr = repo.get_pull(1)
-    # comments = pr.get_issue_comments()
-    # for comment in comments:
-    #     pass
+        return None
 
 
-def checkIfUserIsBot(username) -> bool:
+def check_if_user_is_bot(username) -> bool:
     """
     Checking based on whether the user type is Bot or not.
     """
