@@ -6,22 +6,20 @@
 from datetime import datetime, timedelta
 from github import Github
 from statistics import mean
-from time import sleep
 
-API_BASE_STRING = "https://api.github.com/repos/"
 DAYS_SINCE = 30
 TIME_SINCE = (datetime.now() - timedelta(DAYS_SINCE))  # Get the time from 30-days ago
 
 repositories = [
-    # 'open-telemetry/opentelemetry-java',
-    # 'open-telemetry/opentelemetry-java-contrib',
-    # 'open-telemetry/opentelemetry.io',
+    'open-telemetry/opentelemetry-java',
+    'open-telemetry/opentelemetry-java-contrib',
+    'open-telemetry/opentelemetry.io',
     'open-telemetry/opentelemetry-collector',
-    # 'open-telemetry/opentelemetry-specification',
+    'open-telemetry/opentelemetry-specification',
 ]
 
-GITHUB_TOKEN = "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"  # Allow for more API requests
-g = Github(GITHUB_TOKEN)  # No token required
+GITHUB_TOKEN = "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"
+g = Github(GITHUB_TOKEN)
 
 
 def main(time_since=TIME_SINCE):
@@ -31,7 +29,6 @@ def main(time_since=TIME_SINCE):
     """
     datetime_time_deltas_total = []
     repository_average_response_time_in_seconds = {}
-    examined_item_numbers = {}
     for repoURL in repositories:
         datetime_time_deltas_individual = []
         print("INFO: Processing repo: ", repoURL)
@@ -41,8 +38,6 @@ def main(time_since=TIME_SINCE):
         issues = get_issues_since(repo, time_since)
         if len(issues) > 0:
             for issue in issues:
-                examined_item_numbers[issue.number] = True
-                print("      Adding ", issue.number)
                 time_to_response = get_issue_response_time(issue)
                 if time_to_response is not None:
                     datetime_time_deltas_individual.append(time_to_response)
@@ -51,12 +46,9 @@ def main(time_since=TIME_SINCE):
         pull_requests = get_pulls_since(repo, time_since)
         if len(pull_requests) > 0:
             for pr in pull_requests:
-                if pr.number not in examined_item_numbers:
-                    time_to_response = get_pr_response_time(pr)
-                    if time_to_response is not None:
-                        datetime_time_deltas_individual.append(time_to_response)
-                else:
-                    print("INFO:      PR.number " + str(pr.number) + " is in examined_item_numbers")
+                time_to_response = get_pr_response_time(pr)
+                if time_to_response is not None:
+                    datetime_time_deltas_individual.append(time_to_response)
 
         repository_average_response_time_in_seconds[repoURL] = datetime_time_deltas_individual
 
@@ -82,9 +74,8 @@ def main(time_since=TIME_SINCE):
 
 def print_report(repository_name, average_response_time_in_seconds):
     """
-    Print some loggable / human readable report information.
+    Print some potentially loggable, human-readable report information.
     """
-    # print("average_response_time_in_seconds: ", average_response_time_in_seconds)
     hours = average_response_time_in_seconds // 3600
     minutes = (average_response_time_in_seconds % 3600) // 60
     print("        '" + repository_name +
@@ -93,12 +84,12 @@ def print_report(repository_name, average_response_time_in_seconds):
 
 def calculate_average_time(datetime_time_deltas):
     """
-    Calculate average time of responses in seconds from input list.
+    Calculate average time of responses in seconds from input Datetime list.
+    :returns: the mean (average) of the input list of Datetime objects.
     """
     time_deltas_values_in_seconds = []
     for value in datetime_time_deltas:  # Extract the time value from the Datetime objects
         time_deltas_values_in_seconds.append(value.total_seconds())
-    # print("time_deltas_values_in_seconds: ", time_deltas_values_in_seconds)
     return mean(time_deltas_values_in_seconds)
 
 
@@ -149,7 +140,7 @@ def check_item_is_within_accepted_range(item, since_time):
 def get_pr_response_time(pull_request):
     """
     Get time since creation of PR and first non-bot response comment.
-    :returns None if nothing valid or Datetime of time difference.
+    :returns: None if nothing valid or Datetime of time difference.
     """
     print("INFO:    Processing Pull Request: ", pull_request.number)
     pull_request_created_at = pull_request.created_at
@@ -171,7 +162,7 @@ def get_pr_response_time(pull_request):
 def get_issue_response_time(issue):
     """
     Get time since creation of issue and first non-bot response comment.
-    :returns None if nothing valid or Datetime of time difference.
+    :returns: None if nothing valid or Datetime of time difference.
     """
     print("INFO:    Processing Issue: ", issue.number)
     issue_created_at = issue.created_at
@@ -193,6 +184,7 @@ def get_issue_response_time(issue):
 def check_if_user_is_bot(username) -> bool:
     """
     Checking based on whether the user type is Bot or not.
+    :returns: True if user type is not a "Bot", or False otherwise.
     """
     user = g.get_user(username)
     if user is not None and not g.get_user(username).type == "Bot":
