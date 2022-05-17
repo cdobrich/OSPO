@@ -32,7 +32,9 @@ def main():
     pull_requests = get_pulls_since(repo, TIME_SINCE)
     if len(pull_requests) > 0:
         for pr in pull_requests:
-            pass
+            get_pr_response_time(pr)
+
+    # Calculate average time of responses
 
 
 def get_pulls_since(repository, since_time):
@@ -65,8 +67,24 @@ def check_pull_requests_is_within_accepted_range(pr, since_time):
 
 
 def get_pr_response_time(pull_request):
-    comments = pull_request.get_issue_comments()
-    pass
+    """
+    Get time since creation of PR and first non-bot response comment.
+    :returns None if nothing valid or Datetime of time difference.
+    """
+    pull_request_created_at = pull_request.created_at
+    comment_created_at = None
+    for comment in pull_request.get_issue_comments():  # Assuming comments are in order
+        if check_if_user_is_bot(comment.user.login):  # Only use comments from non-bots
+            comment_created_at = comment.created_at
+            break  # Stop at first valid non-bot response
+    if comment_created_at is not None:
+        # Found a valid comment from a non-bot
+        time_diff = comment_created_at - pull_request_created_at
+        print("Timediff: ", time_diff)
+        return time_diff
+    else:
+        print("No valid responses yet for PR: ", pull_request.id)
+        return None
 
 
 def get_issue_response_time(issue):
@@ -74,17 +92,14 @@ def get_issue_response_time(issue):
     Get time since creation of issue and first non-bot response comment.
     :returns None if nothing valid or Datetime of time difference.
     """
-    print("Issue ID#: ", issue.number)
-    print("  Number of comments: ", issue.comments)
     issue_created_at = issue.created_at
     comment_created_at = None
     for comment in issue.get_comments():  # Assuming comments are in order
         if check_if_user_is_bot(comment.user.login):
             comment_created_at = comment.created_at
-            break
+            break  # Stop at first valid non-bot response
     if comment_created_at is not None:
         # Found a valid comment from a non-bot
-        # print("Type: ", issue_created_at)
         time_diff = comment_created_at - issue_created_at
         print("Timediff: ", time_diff)
         return time_diff
