@@ -1,12 +1,15 @@
-from datetime import datetime, timedelta
+# NOTE: the functions get_pr_response_time() and get_issue_response_time() could ALMOST be generalized/templatized,
+# except the method call for getting comments is slightly different for issues and pull-requests.
 
-from github import Github, PaginatedList
+from datetime import datetime, timedelta
+from github import Github
+from statistics import mean
 
 API_BASE_STRING = "https://api.github.com/repos/"
 DAYS_SINCE = 30
 TIME_SINCE = (datetime.now() - timedelta(DAYS_SINCE))  # Get the time from 30-days ago
 
-repos = [
+repositories = [
     'open-telemetry/opentelemetry-java',
     'open-telemetry/opentelemetry-java-contrib',
     'open-telemetry/opentelemetry.io',
@@ -19,22 +22,37 @@ g = Github(GITHUB_TOKEN)  # No token required
 
 
 def main():
-    repo = g.get_repo(repos[0])
+    datetime_time_deltas = []
+    for repoURL in repositories:
+        repo = g.get_repo(repoURL)
 
-    # Get Issues
-    issues = repo.get_issues(since=TIME_SINCE)
-    for issue in issues:
-        pass
-    issue = repo.get_issue(4448)
-    get_issue_response_time(issue)
+        # Get Issues
+        issues = repo.get_issues(since=TIME_SINCE)
+        if issues.totalCount > 0:
+            for issue in issues:
+                time_to_response = get_issue_response_time(issue)
+                if time_to_response is not None:
+                    datetime_time_deltas.append(time_to_response)
 
-    # Get PRs
-    pull_requests = get_pulls_since(repo, TIME_SINCE)
-    if len(pull_requests) > 0:
-        for pr in pull_requests:
-            get_pr_response_time(pr)
+        # Get PRs
+        pull_requests = get_pulls_since(repo, TIME_SINCE)
+        if len(pull_requests) > 0:
+            for pr in pull_requests:
+                time_to_response = get_pr_response_time(pr)
+                if time_to_response is not None:
+                    datetime_time_deltas.append(time_to_response)
 
     # Calculate average time of responses
+    time_deltas_values_in_seconds = []
+    for value in datetime_time_deltas:
+        time_deltas_values_in_seconds.append(value.total_seconds())
+    print()
+    print("time_deltas_values_in_seconds: ", time_deltas_values_in_seconds)
+    average_response_time_in_seconds = mean(time_deltas_values_in_seconds)
+    print("average_response_time_in_seconds: ", average_response_time_in_seconds)
+    hours = average_response_time_in_seconds // 3600
+    minutes = (average_response_time_in_seconds % 3600) // 60
+    print("The average response time is {:02d}:{:02d}".format(int(hours), int(minutes)))
 
 
 def get_pulls_since(repository, since_time):
@@ -83,7 +101,7 @@ def get_pr_response_time(pull_request):
         print("Timediff: ", time_diff)
         return time_diff
     else:
-        print("No valid responses yet for PR: ", pull_request.id)
+        # print("No valid responses yet for PR: ", pull_request.number)
         return None
 
 
@@ -104,7 +122,7 @@ def get_issue_response_time(issue):
         print("Timediff: ", time_diff)
         return time_diff
     else:
-        print("No valid responses yet for issue: ", issue.id)
+        # print("No valid responses yet for issue: ", issue.number)
         return None
 
 
