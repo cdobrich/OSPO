@@ -1,20 +1,23 @@
 # NOTE: the functions get_pr_response_time() and get_issue_response_time() could ALMOST be generalized/templatized,
 # except the method call for getting comments is slightly different for issues and pull-requests.
 
+# Attempts to use Github's API for get_issues(since=TIME) appears problematic.
+
 from datetime import datetime, timedelta
 from github import Github
 from statistics import mean
+from time import sleep
 
 API_BASE_STRING = "https://api.github.com/repos/"
 DAYS_SINCE = 30
 TIME_SINCE = (datetime.now() - timedelta(DAYS_SINCE))  # Get the time from 30-days ago
 
 repositories = [
-    'open-telemetry/opentelemetry-java',
-    'open-telemetry/opentelemetry-java-contrib',
-    'open-telemetry/opentelemetry.io',
+    # 'open-telemetry/opentelemetry-java',
+    # 'open-telemetry/opentelemetry-java-contrib',
+    # 'open-telemetry/opentelemetry.io',
     'open-telemetry/opentelemetry-collector',
-    'open-telemetry/opentelemetry-specification',
+    # 'open-telemetry/opentelemetry-specification',
 ]
 
 GITHUB_TOKEN = "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"  # Allow for more API requests
@@ -28,15 +31,18 @@ def main(time_since=TIME_SINCE):
     """
     datetime_time_deltas_total = []
     repository_average_response_time_in_seconds = {}
+    examined_item_numbers = {}
     for repoURL in repositories:
         datetime_time_deltas_individual = []
         print("INFO: Processing repo: ", repoURL)
         repo = g.get_repo(repoURL)
 
         # Get Issues
-        issues = repo.get_issues(since=time_since)
-        if issues.totalCount > 0:
+        issues = get_issues_since(repo, time_since)
+        if len(issues) > 0:
             for issue in issues:
+                examined_item_numbers[issue.number] = True
+                print("      Adding ", issue.number)
                 time_to_response = get_issue_response_time(issue)
                 if time_to_response is not None:
                     datetime_time_deltas_individual.append(time_to_response)
@@ -45,9 +51,12 @@ def main(time_since=TIME_SINCE):
         pull_requests = get_pulls_since(repo, time_since)
         if len(pull_requests) > 0:
             for pr in pull_requests:
-                time_to_response = get_pr_response_time(pr)
-                if time_to_response is not None:
-                    datetime_time_deltas_individual.append(time_to_response)
+                if pr.number not in examined_item_numbers:
+                    time_to_response = get_pr_response_time(pr)
+                    if time_to_response is not None:
+                        datetime_time_deltas_individual.append(time_to_response)
+                else:
+                    print("INFO:      PR.number " + str(pr.number) + " is in examined_item_numbers")
 
         repository_average_response_time_in_seconds[repoURL] = datetime_time_deltas_individual
 
@@ -93,6 +102,21 @@ def calculate_average_time(datetime_time_deltas):
     return mean(time_deltas_values_in_seconds)
 
 
+def get_issues_since(repository, since_time):
+    """
+    Get the Issues from input repository since the input time.
+    :param repository: The target repository
+    :param since_time: The datetime cut-off value for when pull requests are no longer considered.
+    :returns: List of pull requests within the datetime range, or an empty list.
+    """
+    issues_within_valid_time_range = []
+    issues_temp = repository.get_issues()
+    for issue_candidate in issues_temp:
+        if check_item_is_within_accepted_range(issue_candidate, since_time):
+            issues_within_valid_time_range.append(issue_candidate)
+    return issues_within_valid_time_range
+
+
 def get_pulls_since(repository, since_time):
     """
     Get the Pull Requests from input repository since the input time.
@@ -103,20 +127,20 @@ def get_pulls_since(repository, since_time):
     pull_requests_within_valid_time_range = []
     pull_requests_temp = repository.get_pulls()
     for pr_candidate in pull_requests_temp:
-        if check_pull_requests_is_within_accepted_range(pr_candidate, since_time):
+        if check_item_is_within_accepted_range(pr_candidate, since_time):
             pull_requests_within_valid_time_range.append(pr_candidate)
     return pull_requests_within_valid_time_range
 
 
-def check_pull_requests_is_within_accepted_range(pr, since_time):
+def check_item_is_within_accepted_range(item, since_time):
     """
-    Determine if the input Pull Request object's created time is within (greater than) the input Datetime delta.
+    Determine if the input Issue/Pull Request object's created time is within (greater than) the input Datetime delta.
 
-    :param pr: The candidate pull request
+    :param item: The candidate issue (type Issue) or pull request (type Pull Request).
     :param since_time: The datetime cut-off value for when pull requests are no longer considered valid.
     :returns: True if within allowed time range, or False if not.
     """
-    if pr.created_at > since_time:
+    if item.created_at > since_time:
         return True
     else:
         return False
@@ -149,7 +173,7 @@ def get_issue_response_time(issue):
     Get time since creation of issue and first non-bot response comment.
     :returns None if nothing valid or Datetime of time difference.
     """
-    print("INFO:    Processing Pull Request: ", issue.number)
+    print("INFO:    Processing Issue: ", issue.number)
     issue_created_at = issue.created_at
     comment_created_at = None
     for comment in issue.get_comments():  # Assuming comments are in order
