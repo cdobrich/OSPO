@@ -1,2 +1,2 @@
 # OSPO
-OSPO take home assessment
+OSPO take home assessment.
